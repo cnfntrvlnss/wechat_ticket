@@ -1,0 +1,12 @@
+{
+    // See https://go.microsoft.com/fwlink/?LinkId=733558
+    // for the documentation about the tasks.json format
+    "version": "2.0.0",
+    "tasks": [
+        {
+            "label": "start tomcat",
+            "type": "shell",
+            "command": "D:\\apache-tomcat-9.0.1\\bin\\startup.bat"
+        }
+    ]
+}
