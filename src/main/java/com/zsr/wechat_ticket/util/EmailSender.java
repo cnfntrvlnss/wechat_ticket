@@ -10,7 +10,7 @@ import javax.mail.internet.MimeMessage;
 
 public class EmailSender {
 
-	public static boolean sendQQEmail(String to, String msg) {
+	public static boolean sendQQEmail(String to, String subject, String msg) {
         Properties properties = new Properties();
         properties.put("mail.transport.protocol", "smtp");// 连接协议
         properties.put("mail.smtp.host", "smtp.qq.com");// 主机名
@@ -26,12 +26,12 @@ public class EmailSender {
             // 设置发件人邮箱地址
             message.setFrom(new InternetAddress("357604901@qq.com"));
             // 设置收件人邮箱地址 
-            message.setRecipients(Message.RecipientType.TO, new InternetAddress[]{new InternetAddress("zhouqf@inspur.com"),new InternetAddress("zhengshr@inspur.com"),new InternetAddress("543051040@qq.com"),new InternetAddress("916976682@qq.com")});
+            message.setRecipients(Message.RecipientType.TO, new InternetAddress[]{new InternetAddress(to)});
             //message.setRecipient(Message.RecipientType.TO, new InternetAddress("xxx@qq.com"));//一个收件人
             // 设置邮件标题
-            message.setSubject("xmqtest");
+            message.setSubject(subject);
             // 设置邮件内容
-            message.setText("邮件内容邮件内容邮件内容xmqtest");
+            message.setText(msg);
             // 得到邮差对象
             Transport transport = session.getTransport();
             // 连接自己的邮箱账户

@@ -9,7 +9,7 @@ public class User {
 	String staffNumber;
 	String office;
 	String email;
-	String password;
+	String bindFlag;
 	String avatarUrl;
 	String city;
 	String gender;
@@ -59,11 +59,11 @@ public class User {
 	public void setEmail(String email) {
 		this.email = email;
 	}
-	public String getPassword() {
-		return password;
+	public String getBindFlag() {
+		return bindFlag;
 	}
-	public void setPassword(String password) {
-		this.password = password;
+	public void setBindFlag(String password) {
+		this.bindFlag = password;
 	}
 	public String getAvatarUrl() {
 		return avatarUrl;

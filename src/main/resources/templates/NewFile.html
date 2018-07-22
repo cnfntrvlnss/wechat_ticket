@@ -1,11 +1,563 @@
 <!DOCTYPE html>
 <html lang="en" xmlns:th="http://www.thymeleaf.com">
 <head>
-<meta charset="UTF-8"/>
-<title>Insert title here</title>
+	<meta charset="UTF-8"/>
+	<title>订票小程序后台管理页面</title>
+	<link rel="stylesheet" type="text/css" href="/jquery-easyui-1.5.4.1/themes/default/easyui.css" />
+	<link rel="stylesheet" type="text/css" href="/jquery-easyui-1.5.4.1/themes/icon.css" />
+	<script type="text/javascript" src="/jquery-easyui-1.5.4.1/jquery.min.js"></script>
+    <script type="text/javascript" src="/jquery-easyui-1.5.4.1/jquery.easyui.min.js"></script>
+    <script type="text/javascript" src="/FileSaver.js"></script>
+    <script lang="javascript" src="/js-xlsx/xlsx.full.min.js"></script>
 </head>
-<body>
-<h2>holy world!</h2>
-<p>name: <span th:text="${username}"></span></p>
+<body class="easyui-layout">
+<div data-options="region:'north'" style="height:50px">
+<h4>这里是订票小程序后台管理页面。Admin,欢迎您！</h4>
+</div>
+<div class="easyui-accordion" data-options="region:'center',onSelect: choosePanel">
+<div title="餐票管理">
+	<div id="ticketTool">
+		<input id="startDateBox" class="easyui-datebox" data-options=
+		"formatter:formatDate,parser:parseDate,editable:false,
+		buttonText:'获取',iconAlign:'left',onClickButton:getTickets" />
+		<a href="#" onclick="exportTickets()" class="easyui-linkbutton" data-options="">导出为excel</a>
+
+	</div>
+	<table id="ticketDg"></table>
+</div>
+
+<div title="用户管理">
+	<div id="userTool" >
+	<a href="#" onclick="$('#fileDlg').dialog('open')" class="easyui-linkbutton" data-options="iconCls:'icon-add',plain:true">导入</a>
+	<a href="#" onclick="removeUsers()" class="easyui-linkbutton" data-options="iconCls:'icon-add',plain:true">删除</a>
+	<!-- 
+	<a href="#" onclick="" class="easyui-linkbutton" data-options="iconCls:'icon-add',plain:true">查找</a>
+	 -->
+	 <a href="#" onclick="" class="easyui-linkbutton" data-options="iconCls:'icon-add',plain:true">查找</a>
+	<input class="easyui-textbox" data-options="iconCls:'icon-search',buttonText:'查找',iconAlign:'left',onClickButton:searchUser" 
+	style="width:300px" />
+	</div>
+	<table id="userDg"></table>
+    <div id="fileDlg" class="easyui-dialog" title="请选择文件" style="height:200px;width:400px"
+    data-options="iconCls:'icon-edit',closed:true,modal:true,buttons:'#fileDlgBtns'" >
+    <table style="width:100%;padding-top:20px">
+        <tr>
+            <td style="text-align:right">周报：</td>
+            <td colspan="3">
+                <input class="easyui-filebox"  style="width:80%"
+                data-options="buttonText:'选择'"></input>
+            </td>
+        </tr>
+    </table>
+    </div>
+    <div id="fileDlgBtns">
+        <a href="#" onclick="importUserFile()" class="easyui-linkbutton">确定</a>
+        <span>&nbsp;&nbsp;&nbsp;&nbsp;</span>
+        <a href="#" onclick="$('#fileDlg').dialog('close')" class="easyui-linkbutton">取消</a>
+    </div>
+	
+</div>
+</div>
+<script>
+//<![CDATA[
+	
+	//////////////////////////////////////////////////////////////
+	// ticket management
+	//////////////////////////////////////////////////////////////
+    function formatDate(date){
+        var y = date.getFullYear() + '';
+        var m = date.getMonth() + 1 + '';
+        var d = date.getDate() + '';
+        if(m.length < 2){
+            m = '0' + m;
+        }
+        if(d.length < 2){
+            d = '0' + d;
+        }
+        return '' + y + m + d;
+    }
+    function parseDate(s) {
+        var y = s.substr(0,4);
+        var m = s.substr(4, 2);
+        var d = s.substr(6,2);
+        var s = y + '-' + m + '-' + d;
+        var t = Date.parse(s);
+        if (!isNaN(t)) {
+            return new Date(t);
+        } else {
+            return new Date();
+        } 
+    }
+
+	
+	$('#ticketDg').datagrid({
+		columns: [[
+			{field: 'staffNumber', title: '职工编号', width: 100},
+			{field: 'department', title: '部门', width: 100, sortable: true},
+			{field: 'office', title: '二级部门', width: 100, sortable: true},
+			{field: 'userName', title: '姓名', width: 100}
+		]]
+		
+	});
+	
+	function loadTicketGrid(dates, users) {
+		console.log("in loadTicketGrid, dates:", dates, "users:", users);
+		users = users.filter(function(v) {
+			if(v == null) return false;
+			return true;
+		});
+		var fields = [			
+			{field: 'staffNumber', title: '职工编号', width: 100},
+			{field: 'department', title: '部门', width: 100},
+			{field: 'office', title: '二级部门', width: 100},
+			{field: 'userName', title: '姓名', width: 100}
+		];
+		dates.forEach(function(e){
+			fields.push({field: e, title: e, width: 100});
+		});
+		$('#ticketDg').datagrid({
+			columns:[fields],
+            rownumbers: true,
+			multiSort: true,
+			sortName: 'department,office',
+			sortOrder: 'asc,asc'
+		});
+		$('#ticketTool').click(function(){
+			$('#ticketDg').datagrid('unselectAll');
+		});
+		$('#ticketDg').datagrid('loadData', {
+			total: users.length,
+			rows: users
+		});
+	}
+	
+	function getTickets(){
+		var startDate = $('#startDateBox').datebox('getText');
+		if(startDate.length == 0){
+			startDate = formatDate(new Date());
+			$('#startDateBox').datebox('setText', startDate);
+		}
+		var endDate = parseDate(startDate);
+		endDate.setDate(endDate.getDate() + 7);
+		var endDate = formatDate(endDate);
+		$.ajax({
+			url: 'getTickets',
+			type: 'POST',
+			conentType: 'application/x-www-form-urlencoded',
+			data: {
+				startDate: startDate,
+				endDate: endDate
+			},
+			dataType: 'text',
+			error: function(data){
+				$.messager.alert({
+					title: '请求错误',
+					msg: JSON.stringify(data)
+				});
+			},
+			success: function(data){
+				var res = JSON.parse(data);
+				var tickets = res.tickets;
+				var users = res.users;
+				if(tickets == undefined || users == undefined){
+					$.messager.alert({
+						title: '返回错误',
+						msg: data
+					});
+				}
+				
+				var dates = {};
+				var usertickets = users;
+				tickets.forEach(function (e) {
+					if(dates[e.useDate] == undefined) dates[e.useDate] = 1;
+					var user = usertickets[e.staffNumber];
+					if(user == undefined || user == null) return;
+					
+					if(user[e.useDate] == undefined) user[e.useDate] = 1;
+					else user[e.useDate] += 1;
+				});
+
+				partdates = Object.keys(dates).sort().slice(0, 7).reduce(function(sum, e){
+					sum[e] = dates[e];
+					return sum;
+				}, {});
+				//console.log("in getTickets, success from ajax, partDates:", partdates);
+				loadTicketGrid(Object.keys(partdates), Object.values(usertickets));
+			}
+		});
+	}
+	
+	function exportTickets() {
+		var rows = $('#ticketDg').datagrid('getData').rows;
+		var startDate = $('#startDateBox').datebox('getText');
+		var dates = {};
+		rows.forEach(function(v) {
+			Object.keys(v).filter(function(e){
+				if(/^\d+$/.test(e)){
+					return true;
+				}
+				return false;
+			}).forEach(function(e){
+				if(!(e in dates)){
+					dates[e] = 1;
+				}
+			});
+		});
+		
+		var dateArr = Object.keys(dates).sort();
+		var nrows = rows.map(v => {
+			var ret = {};
+			ret['staffNumber'] = v.staffNumber;
+			ret['department'] = v.department;
+			ret['office'] = v.office;
+			ret['userName'] = v.userName;
+			
+			for(var idx = 0; idx < dateArr.length; idx++) {
+				var tmp = v[dateArr[idx]];
+				if(tmp == undefined) tmp = "";
+				ret["D" + dateArr[idx]] = tmp;
+			}
+			
+			return ret;
+		});
+		saveExcel(nrows, "餐票列表_" + startDate);
+	}
+	
+	function saveExcel(rows, name, type){
+		var tmpdata = rows[0];
+		rows.unshift({});            
+		var keyMap = []; //获取keys
+		var colprops = [];// 设置列宽
+		for (var k in tmpdata) {
+			keyMap.push(k);
+			var v = k;
+			if(/^D\d+$/.test(k)){
+				v = k.slice(1);
+			}
+			rows[0][k] = v;
+			wpx = 100;
+			colprops.push({wpx:wpx});
+		}            
+		var tmpdata = [];//用来保存转换好的json 
+		rows.map(
+			(v, i) => keyMap.map((k, j) => Object.assign({}, {
+				v: v[k], 
+				position: (j > 25 ? getCharCol(j) : String.fromCharCode(65 + j)) + (i + 1)
+			}))
+		).reduce(
+			(prev, next) => prev.concat(next)
+		).forEach(
+			(v, i) => tmpdata[v.position] = {
+				v: v.v,
+				//t: "s"
+			}
+		); 
+		
+		var headCellStyle = {
+            font: {
+                name: 'Calibri',
+                sz: 12,
+                color: {rgb: "#FFFF0000"},
+                bold: true,
+                italic: false,
+                underline: false
+              },
+              alignment: {
+                horizontal: "center",
+                vertical: "center",
+                wrapText: true
+              }
+		};
+		var dataCellStyle = {
+            font: {
+                name: 'Calibri',
+                sz: 12,
+                color: {rgb: "#FFFF0000"},
+                italic: false,
+                underline: false
+              },
+              alignment: {
+                horizontal: "center",
+                vertical: "center",
+                wrapText: true
+              }
+		};
+
+		//console.log("tmpdata: ", tmpdata);
+		var islogedE = false;
+		for(k in tmpdata){
+			if(k.endsWith("1")){
+				tmpdata[k].s = headCellStyle;
+			}else{
+				tmpdata[k].s = dataCellStyle;
+			}
+		}
+		var outputPos = Object.keys(tmpdata); //设置区域,比如表格从A1到D10
+ 
+		var tmpWB = {         
+			SheetNames: ['mySheet'], //保存的表标题
+			Sheets: {                    
+				'mySheet': Object.assign({},
+					tmpdata, //内容
+					{ 
+						'!ref': outputPos[0] + ':' + outputPos[outputPos.length - 1], //设置填充区域
+						'!cols': colprops
+					})
+			}
+		};
+		//console.log("tmpWB:", tmpWB);
+		tmpDown = new Blob([s2ab(XLSX.write(tmpWB,
+			{ bookType: (type == undefined ? 'xlsx' : type), bookSST: false, type: 'binary' }//这里的数据是用来定义导出的格式类型
+		))], {                    type: ""
+		});
+
+		saveAs(tmpDown, name + '.xlsx');
+	}
+	
+	function getCharCol(n) {            
+		let temCol = '',s = '',m = 0
+		while (n > 0) {
+			m = n % 26 + 1
+			s = String.fromCharCode(m + 64) + s
+			n = (n - m) / 26
+		}            
+		return s
+	}        
+	function s2ab(s) {       
+		if (typeof ArrayBuffer !== 'undefined') {
+			var buf = new ArrayBuffer(s.length);
+			var view = new Uint8Array(buf);
+			for (var i = 0; i != s.length; ++i) view[i] = s.charCodeAt(i) & 0xFF;
+			return buf;
+			
+		} else {
+			var buf = new Array(s.length); 
+			for (var i = 0; i != s.length; ++i) buf[i] = s.charCodeAt(i) & 0xFF;
+			return buf;
+		}
+	}
+
+	//////////////////////////////////////////////////////////////
+	// user management
+	//////////////////////////////////////////////////////////////
+var userDataMap = {};
+$(function(){
+	
+});
+
+function choosePanel(title, index) {
+	if(title == '用户管理'){
+		if((function(m){
+				for(var k in m){
+					return false; 
+				}
+				return true;
+			})(userDataMap), userDataMap){
+			$('#userDg').datagrid('load', {isAll: 'true'});
+		}
+	}
+}
+
+function searchUser(){
+	var value = $(this).textbox('getValue');
+	$.messager.alert("提示", "在前端查找user, 查找字符串为: " + value);
+	var rows = Object.keys(userDataMap).map(k=>userDataMap[k]);
+	var nrows = rows.filter(function(v){
+		var tstr = v.department + '-' + v.office + '-' + v.userName + "-" + v.userNumber;
+		//if all of words in value  exists in tstr, return true.
+		return ! value.split(' ').some(function(v){
+			if(tstr.indexOf(v) == -1){
+				return true;
+			}
+			return false;
+		});
+	});
+	
+	$('#userDg').datagrid('loadData', {
+		total: nrows.length,
+		rows: nrows
+	});
+}
+
+function removeUsers() {
+	var rows = $('#userDg').datagrid('getChecked');
+	var staffs = rows.map(v=>v.staffNumber);
+	console.log("in removeUsers, rows:", rows);
+	console.log("in removeUsers, staffs:", staffs);
+	if( staffs instanceof Array && staffs.length > 0){
+		$.ajax({
+			url: 'removeUsers',
+			type: 'POST',
+			contentType: "application/json;charset=utf-8",
+			data: JSON.stringify({staffs: staffs}),
+			dataType: 'text',
+			error: function(data){
+				console.log("error from removeUsers:", data);
+				if(data.responseText != undefined){
+					$.messager.alert('错误', data.responseText);
+				}else{
+					$.messager.alert("错误", JSON.stringify(data));
+				}
+			},
+			success: function(data){
+				var res = JSON.parse(data);
+				if(res.staffs != undefined && res.staffs instanceof Array){
+					$('#userDg').datagrid('uncheckAll');
+					var m = {};
+					res.staffs.forEach(function(v){
+						m[v] = 1;
+						delete userDataMap[v];
+					});
+					//console.log("m:", m);
+					var rows = $('#userDg').datagrid('getData').rows;
+					var st = 0;
+					var origLen = rows.length;
+					rows.forEach(function (v, i) {
+						if(v.staffNumber in m){
+						}else{
+							if(st != i){
+								rows[st] = v;
+								//console.log("refreshRow, ",v.staffNumber, st, i);
+								$('#userDg').datagrid('refreshRow', st);
+							}
+							st ++;
+						}
+					});
+					for(var idx = origLen-1; idx >=st; idx --){
+						//console.log("deleteRow, ", idx, origLen);
+						$('#userDg').datagrid('deleteRow', idx);
+					}
+				}else{
+					$.messager.alert('错误', "返回未知的字符串: " + data);
+				}
+			}
+		});
+	}
+}
+
+var userFieldArr = ['staffNumber','userName','gender','email','department','office','province','city'];
+var userTitleArr = ['职工编号','姓名','性别','邮箱地址','所属部门','二级部门','省份','城市'];
+$('#userDg').datagrid({
+	url: 'findUsers',
+	method: 'POST',
+	loadMsg: '正在加载数据。。。',
+	emptyMsg: '没有数据！',
+	remoteSort: false,
+	striped: true,
+	rowNumbers: true,
+	multiSort: true,
+	columns: [[
+		{field: 'id', checkbox: true},
+		{field: userFieldArr[0], title: userTitleArr[0], width: 100 },
+		{field: userFieldArr[1], title: userTitleArr[1], width: 100},
+		{field: userFieldArr[2], title: userTitleArr[2], width: 50},
+		{field: userFieldArr[3], title: userTitleArr[3], width: 200},
+		{field: 'bindFlag', title: '绑定标识', width: 50},
+		{field: userFieldArr[4], title: userTitleArr[4], width: 100, sortable: true},
+		{field: userFieldArr[5], title: userTitleArr[5], width: 100, sortable: true},
+		{field: userFieldArr[6], title: userTitleArr[6], width: 100},
+		{field: userFieldArr[7], title: userTitleArr[7], width: 100}
+	]],
+	toolbar: '#userTool',
+	loadFilter: function(data){
+		console.log("in loadFilter, isArray: ", data instanceof Array, ",", "data: ", data);
+		if(data instanceof Array) {
+			data.forEach(function(v, i){
+				userDataMap[v.staffNumber] = v;
+			});
+			return {total: data.length, rows: data};
+		}else{
+			return data;
+		}
+	},
+	onLoadSuccess: function(data) {
+		/*
+		$.messager.show({
+			title: '通知',
+			msg: '用户列表加载成功！',
+			timeout: 4000,
+		});*/
+	},
+	onLoadError: function(data){
+		$.messager.alert('错误', '加载失败: ' + data);
+	}
+});
+
+function importUserFile(){
+	var file = $('#fileDlg input[type="file"]').prop('files')[0];
+	importUserExcel(file);
+	$('#fileDlg').dialog('close');
+}
+
+function importUserExcel(file) {
+	var reader = new FileReader();
+	reader.onload = function (e){
+		var data = e.target.result;
+		var workbook = XLSX.read(data, {type: 'binary'});
+		var first_sheet_name = workbook.SheetNames[0];
+		var ws = workbook.Sheets[first_sheet_name];
+		result = XLSX.utils.sheet_to_json(ws);
+		console.log("in importUserExcel, from excel:", result);
+		res = result.map(v=>{
+			ret = {};
+			for(var i=0; i<userFieldArr.length; i++){
+				if(v[userTitleArr[i]] != undefined){
+					ret[userFieldArr[i]] = v[userTitleArr[i]];
+				}
+			}
+			return ret;
+		});
+		addUsers(res);
+	};
+	reader.readAsBinaryString(file);
+}
+
+function addUsers(origUsers) {
+	$.ajax({
+		url: 'addUsers',
+		type: 'POST',
+		contentType: 'application/json; charset=utf-8',
+		data: JSON.stringify(origUsers),
+		dataType: 'text',
+		error: function(data){
+			$.messager.alert('error', JSON.parse(data));
+		},
+		success: function(data){
+			users = JSON.parse(data);
+			var staffMap = {};
+			if(users.length > 0){
+				users.forEach(function(u){
+					staffMap[u.staffNumber] = u;
+					userDataMap[u.staffNumber] = u;
+
+				});
+				
+				var nrows = Object.values(userDataMap);
+				$('#userDg').datagrid('loadData', {
+					total: nrows.length,
+					rows: nrows
+				});
+			}
+			
+			if(origUsers.length != users.length){
+				var staffs = origUsers.filter(function(v){
+					if(v.staffNumber in staffMap){
+						return false;
+					}
+					return true;
+				}).map(v => v.staffNumber);
+				$.messager.alert({
+					title: '导入失败的员工编号',
+					msg: JSON.stringify(staffs),
+					width: 500,
+					height: 300,
+				});
+			}
+		}
+	});
+}
+
+//]]>
+</script>
 </body>
 </html>

@@ -29,15 +29,15 @@ public class UserRepositoryTest {
 		user.setStaffNumber(sn);
 		
 		repo.save(user);
-		repo.setPassword(sn, "12nf8");
-		user.setPassword("12nf8");
+		repo.setBindFlag(sn, "12nf8");
+		user.setBindFlag("12nf8");
 		User user1 = repo.findByNumber("43105");
 		
 		assertThat(user.getEmail(), equalTo(user1.getEmail()));
 		assertThat(user.getDepartment(), equalTo(user1.getDepartment()));
 		assertThat(user.getOffice(), equalTo(user1.getOffice()));
 		assertThat(user.getUserName(), equalTo(user1.getUserName()));
-		assertThat(user.getPassword(), equalTo(user1.getPassword()));
+		assertThat(user.getBindFlag(), equalTo(user1.getBindFlag()));
 		assertThat(0, anything());
 	}
 }
