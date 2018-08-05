@@ -12,7 +12,10 @@
 </head>
 <body class="easyui-layout">
 <div data-options="region:'north'" style="height:50px">
+<div style="display:inline-block;width:100%">
+<h4> <a id="logout" href="/logout"  style="float:right">logout </a> </h4>
 <h4>这里是订票小程序后台管理页面。Admin,欢迎您！</h4>
+</div>
 </div>
 <div class="easyui-accordion" data-options="region:'center',onSelect: choosePanel">
 <div title="餐票管理">
@@ -60,7 +63,7 @@
 </div>
 <script>
 //<![CDATA[
-	
+
 	//////////////////////////////////////////////////////////////
 	// ticket management
 	//////////////////////////////////////////////////////////////

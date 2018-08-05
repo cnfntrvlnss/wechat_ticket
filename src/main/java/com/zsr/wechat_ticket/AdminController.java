@@ -141,7 +141,6 @@ public class AdminController {
 	
 	@RequestMapping("main")
 	public String mainAdmin(Model model) {
-		model.addAttribute("username", "zhengshr");
 		return "NewFile";
 	}
 	

@@ -1,0 +1,37 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<beans:beans xmlns="http://www.springframework.org/schema/security"
+xmlns:beans="http://www.springframework.org/schema/beans"
+xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+xsi:schemaLocation="http://www.springframework.org/schema/beans
+        http://www.springframework.org/schema/beans/spring-beans-3.0.xsd
+        http://www.springframework.org/schema/security
+        http://www.springframework.org/schema/security/spring-security.xsd">
+
+<http entry-point-ref="digestEntryPoint" >
+<csrf disabled="true"/>
+<intercept-url pattern="/rest/**" access="isAuthenticated()" />
+<custom-filter ref="digestFilter" position="DIGEST_AUTH_FILTER" />
+</http>
+
+<authentication-manager id="authManager">
+<authentication-provider user-service-ref="myUserDetailsService"/> 
+</authentication-manager>
+<beans:bean id="myUserDetailsService" class="xxx.MyUserDetailsService">
+</beans:bean>
+
+<beans:bean id="digestEntryPoint"
+class="org.springframework.security.web.authentication.www.DigestAuthenticationEntryPoint">
+<beans:property name="realmName"
+value="Contacts Realm via Digest Authentication" />
+<beans:property name="key" value="acegi" />
+</beans:bean>
+
+<beans:bean id="digestFilter"
+class="xxx.MyDigestAuthenticationFilter">
+<beans:property name="userDetailsService" ref="myUserDetailsService" />
+<beans:property name="authenticationEntryPoint" ref="digestEntryPoint" />
+</beans:bean>
+
+<!-- 
+ -->
+</beans:beans>
